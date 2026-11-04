@@ -157,10 +157,14 @@ private struct MenuBarTextStrip: View {
     let content: MenuBarContent
 
     var body: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: 7) {
             ForEach(content.groups, id: \.providerID) { group in
                 HStack(spacing: 4) {
-                    glyph(group.icon)
+                    if ProviderAccountID.family(of: group.providerID) == ServerTrafficConfigStore.family {
+                        initialGlyph(group.displayName)
+                    } else {
+                        glyph(group.icon)
+                    }
                     metricsView(group.metrics)
                 }
             }
@@ -205,6 +209,14 @@ private struct MenuBarTextStrip: View {
         } else {
             Circle().fill(Color.black).frame(width: Self.glyphSide - 1, height: Self.glyphSide - 1)
         }
+    }
+
+    /// Server cards all share one mark, so the strip tells them apart by the server name's first letter.
+    private func initialGlyph(_ name: String) -> some View {
+        let initial = name.trimmingCharacters(in: .whitespaces).first.map { String($0).uppercased() } ?? "S"
+        return Text(initial)
+            .font(.system(size: 15, weight: .heavy, design: .rounded))
+            .frame(height: Self.glyphSide)
     }
 }
 

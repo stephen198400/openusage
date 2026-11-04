@@ -249,6 +249,7 @@ final class LocalLimitsAPITests: XCTestCase {
             "ollama": ["session", "weekly", "monthly", "purchasedCredits"],
             "opencode": ["session", "weekly", "monthly"],
             "openrouter": ["credits", "balance", "keyLimit"],
+            "server": ["traffic", "dataUsed"],
             "zai": ["session", "weekly", "webSearches"]
         ]
 

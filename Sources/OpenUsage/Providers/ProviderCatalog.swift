@@ -8,7 +8,8 @@ enum ProviderCatalog {
         defaults: UserDefaults = .standard,
         claudeCards: [ClaudeAccountCard] = [],
         codex: CodexAccountDiscovery = CodexAccountDiscovery(),
-        claudeIdentityKeys: [String: String] = [:]
+        claudeIdentityKeys: [String: String] = [:],
+        servers: [ServerTrafficConfig] = []
     ) -> [ProviderRuntime] {
         // Default provider order (see AGENTS.md "## Providers"): the three established providers first,
         // then every other provider alphabetically by display name.
@@ -76,6 +77,12 @@ enum ProviderCatalog {
             OpenRouterProvider(),
             ZAIProvider()
         ]
+        // One card per configured server, placed where the single Server card sorts (after OpenRouter).
+        let serverCards: [ProviderRuntime] = servers.isEmpty
+            ? [ServerTrafficProvider()]
+            : servers.map { ServerTrafficProvider(provider: ServerTrafficProvider.makeProvider(id: $0.id ?? ServerTrafficConfigStore.family, displayName: $0.name)) }
+        let insertAt = providers.firstIndex { $0.provider.id == "zai" } ?? providers.endIndex
+        providers.insert(contentsOf: serverCards, at: insertAt)
         return providers
     }
 }

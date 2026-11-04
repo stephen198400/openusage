@@ -50,6 +50,8 @@ enum DefaultLayout {
         "openrouter.credits", "openrouter.balance",
         "openrouter.today", "openrouter.week", "openrouter.month", "openrouter.keyLimit",
 
+        "server.traffic", "server.dataUsed",
+
         "zai.session", "zai.weekly", "zai.webSearches"
     ]
 
@@ -86,6 +88,7 @@ enum DefaultLayout {
         // they don't spend the two-star cap on rows a current plan never shows.
         "ollama.monthly",
         "openrouter.credits",
+        "server.traffic",
         "zai.session", "zai.weekly"
     ]
 
