@@ -21,7 +21,7 @@ The login droid saves in `~/.factory`, checked in the same order droid uses:
 1. `auth.v2.loginkeychain`, unlocked with droid's key in your login keychain (`Factory CLI`)
 2. `auth.v2.file` with its key file `auth.v2.key` (droid's on-disk store)
 
-Access tokens last about a week. When one has expired, OpenUsage refreshes it and saves the new tokens back into the same store, so droid keeps working too.
+Access tokens last about a week. When one has expired, MyUsage refreshes it and saves the new tokens back into the same store, so droid keeps working too.
 
 ## Troubleshooting
 

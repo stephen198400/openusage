@@ -20,7 +20,7 @@ The server counts its own traffic; the app never logs in to it.
    it resets. These are saved to `~/.config/openusage/server.json`.
 
 Each server is its own card, named after the server. Add more with **Add Another Server**; the new card
-appears after quitting and reopening OpenUsage. The first server is card `server`, later ones
+appears after quitting and reopening MyUsage. The first server is card `server`, later ones
 `server@<hash>`.
 
 ## Counting

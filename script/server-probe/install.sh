@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the OpenUsage server traffic probe on a Debian/Ubuntu server (run as root).
+# Installs the MyUsage server traffic probe on a Debian/Ubuntu server (run as root).
 #
 # vnStat counts the interface's traffic per day; a systemd timer exports the last 62 days every five
 # minutes to /var/lib/openusage-probe/traffic.json in the schema the app's Server provider reads. The
@@ -27,7 +27,7 @@ if [ ! -s "$TOKEN_FILE" ]; then
   chmod 0600 "$TOKEN_FILE"
 fi
 
-cat >/usr/local/bin/openusage-probe-export <<EXPORT
+cat >/usr/local/bin/myusage-probe-export <<EXPORT
 #!/usr/bin/env bash
 set -euo pipefail
 z="\$(date +%z)"
@@ -48,21 +48,21 @@ vnstat --json d -i "$IFACE" | jq --arg updated "\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 chmod 0644 "\$tmp"
 mv "\$tmp" "$STATE_DIR/traffic.json"
 EXPORT
-chmod 0755 /usr/local/bin/openusage-probe-export
+chmod 0755 /usr/local/bin/myusage-probe-export
 
 cat >/etc/systemd/system/openusage-probe.service <<'UNIT'
 [Unit]
-Description=Export vnStat traffic for OpenUsage
+Description=Export vnStat traffic for MyUsage
 After=vnstat.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/openusage-probe-export
+ExecStart=/usr/local/bin/myusage-probe-export
 UNIT
 
 cat >/etc/systemd/system/openusage-probe.timer <<'UNIT'
 [Unit]
-Description=Export vnStat traffic for OpenUsage every five minutes
+Description=Export vnStat traffic for MyUsage every five minutes
 
 [Timer]
 OnBootSec=1min
@@ -75,8 +75,8 @@ UNIT
 systemctl daemon-reload
 systemctl enable --now openusage-probe.timer >/dev/null
 sleep 2
-/usr/local/bin/openusage-probe-export
+/usr/local/bin/myusage-probe-export
 
 echo "interface: $IFACE"
 echo "export:    $STATE_DIR/traffic.json"
-echo "token:     $TOKEN_FILE (copy it into OpenUsage; never paste it in chat)"
+echo "token:     $TOKEN_FILE (copy it into MyUsage; never paste it in chat)"

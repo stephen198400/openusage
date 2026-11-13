@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you find a security vulnerability in OpenUsage, please report it responsibly. Do not open a public issue.
+If you find a security vulnerability in MyUsage, please report it responsibly. Do not open a public issue.
 
 ### Preferred: GitHub Security Advisories
 
@@ -14,7 +14,7 @@ This keeps the report private until a fix is released.
 
 ### Alternative: Email
 
-Send details to [rob@robinebers.com](mailto:rob@robinebers.com) with the subject line "OpenUsage Security Report".
+Send details to [rob@robinebers.com](mailto:rob@robinebers.com) with the subject line "MyUsage Security Report".
 
 ## What to Include
 
@@ -33,7 +33,7 @@ Send details to [rob@robinebers.com](mailto:rob@robinebers.com) with the subject
 
 The following are in scope:
 
-- The OpenUsage desktop application
+- The MyUsage desktop application
 - The built-in providers (credential handling, API calls)
 - The local HTTP API
 - Build and release infrastructure

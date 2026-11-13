@@ -61,7 +61,7 @@ PY
 
 cat >/etc/systemd/system/openusage-probe-https.service <<UNIT
 [Unit]
-Description=OpenUsage traffic probe over HTTPS
+Description=MyUsage traffic probe over HTTPS
 After=network-online.target
 
 [Service]
