@@ -113,6 +113,7 @@ is still 0 because OpenCode reports whole percentages.
 | Antigravity | `geminiSession`, `geminiWeekly`, `argonWeekly`, `nonGeminiSession`, `nonGeminiWeekly` |
 | Copilot | `premiumCredits`, `extraUsage`, `orgCredits`, `orgSpend`, `chat`, `completions` |
 | Devin | `daily`, `weekly`, `extraUsageBalance` |
+| Droid | `session`, `weekly`, `monthly` |
 | Grok | `weekly` |
 | Ollama | `session`, `weekly`, `monthly` |
 | OpenCode | `session`, `weekly`, `monthly` |

@@ -30,6 +30,33 @@ struct MenuBarContent: Equatable {
     /// Bounded metrics (those with a fill) for the Bars style, flattened in order and capped to four.
     let bars: [Metric]
 
+    /// One slot of the Text strip: a provider on its own, or up to two servers stacked on two lines.
+    enum Segment: Equatable {
+        case provider(Group)
+        case serverStack([Group])
+    }
+
+    /// The Text strip's slots, in order. Server groups stack two per slot (one line each) where the
+    /// first server sits, so several servers don't each take a full-height slot; a lone server keeps the
+    /// regular single-provider look. Model providers always keep their own slot.
+    var segments: [Segment] {
+        let servers = groups.filter { ProviderAccountID.family(of: $0.providerID) == ServerTrafficConfigStore.family }
+        guard servers.count > 1 else { return groups.map(Segment.provider) }
+        let stacks = stride(from: 0, to: servers.count, by: 2).map {
+            Segment.serverStack(Array(servers[$0..<min($0 + 2, servers.count)]))
+        }
+        var result: [Segment] = []
+        var placedServers = false
+        for group in groups {
+            if ProviderAccountID.family(of: group.providerID) == ServerTrafficConfigStore.family {
+                if !placedServers { result += stacks; placedServers = true }
+            } else {
+                result.append(.provider(group))
+            }
+        }
+        return result
+    }
+
     /// Nothing is pinned, every pinned provider is disabled, or no pinned metric has data yet — the
     /// menu bar falls back to the app icon.
     var isEmpty: Bool { groups.isEmpty }

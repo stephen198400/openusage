@@ -22,6 +22,7 @@ struct SecurityToolItemAccessor: SecurityItemAccessing {
                 CursorAuthStore.keychainAccessTokenService,
                 CursorAuthStore.keychainRefreshTokenService,
                 AntigravityAuthStore.keychainService,
+                DroidAuthStore.keychainService,
             ].contains(service)
     }
 

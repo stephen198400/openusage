@@ -34,6 +34,19 @@ final class WidgetMeterStyleTests: XCTestCase {
         }
     }
 
+    func testBoundedCountKeepsUnitInHeadlineWhenSubtitleShowsReset() {
+        // Regression: with a reset date the subtitle reads "Resets in …", so the unit ("GB") used to
+        // vanish and the Server tile read "467.6 used".
+        var data = WidgetData(title: "Data Used", icon: .providerMark("codex"), kind: .count,
+                              used: 467.6, limit: 500, countSuffix: "GB", displayMode: .used)
+        XCTAssertEqual(data.boundedHeadline, "467.6 used")
+        XCTAssertEqual(data.boundedSubtitle, "GB")
+
+        data.resetsAt = Date().addingTimeInterval(6 * 24 * 60 * 60)
+        XCTAssertEqual(data.boundedHeadline, "467.6 GB used")
+        XCTAssertNotEqual(data.boundedSubtitle, "GB")
+    }
+
     func testGlobalModeOverridesDescriptorSampleDisplayMode() async {
         // The descriptor sample is hardcoded to `.used`; the global store value must win on both the
         // live-data path (resolve) and the fallback (sample) path.

@@ -275,7 +275,13 @@ struct WidgetData: Hashable {
         }
         // The unit (e.g. "credits") belongs in boundedSubtitle; the headline carries the mode word.
         // `WidgetDisplayMode.label` is the single source for "Used"/"Left", so there's no second copy.
-        return "\(valueText) \(displayMode.label.lowercased())"
+        // When the subtitle is taken by reset timing, the unit moves into the headline instead so a
+        // count like "467.6 GB used" never loses its unit.
+        let word = displayMode.label.lowercased()
+        if kind == .count, let countSuffix, boundedSubtitle != countSuffix {
+            return "\(valueText) \(countSuffix) \(word)"
+        }
+        return "\(valueText) \(word)"
     }
 
     /// Subtitle under the bounded headline (reset timing or limit context).

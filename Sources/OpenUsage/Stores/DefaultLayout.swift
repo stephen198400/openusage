@@ -39,6 +39,8 @@ enum DefaultLayout {
 
         "devin.daily", "devin.weekly", "devin.extra",
 
+        "droid.session", "droid.weekly", "droid.monthly",
+
         "grok.weekly", "grok.trend",
         "grok.payAsYouGo", "grok.today", "grok.yesterday", "grok.last30",
 
@@ -84,6 +86,7 @@ enum DefaultLayout {
         "codex.session", "codex.weekly",
         "cursor.auto", "cursor.api",
         "copilot.premium",
+        "droid.session", "droid.weekly",
         // Ollama: Monthly is the current plans' meter. Legacy plans' Session and Weekly stay unpinned so
         // they don't spend the two-star cap on rows a current plan never shows.
         "ollama.monthly",
@@ -117,6 +120,8 @@ enum DefaultLayout {
         // (suppressed), so they read "No data" there.
         "copilot.orgCredits", "copilot.orgSpend", "copilot.chat", "copilot.completions",
         "devin.extra",
+        // Droid: Session and Weekly stay above the fold; Monthly sits below the caret.
+        "droid.monthly",
         "grok.payAsYouGo", "grok.today", "grok.yesterday", "grok.last30",
         // Ollama: the plan meters stay above the fold; purchased credits sit below the caret.
         "ollama.purchasedCredits",

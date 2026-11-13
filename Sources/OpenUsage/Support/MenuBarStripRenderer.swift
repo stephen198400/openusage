@@ -158,14 +158,19 @@ private struct MenuBarTextStrip: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            ForEach(content.groups, id: \.providerID) { group in
-                HStack(spacing: 4) {
-                    if ProviderAccountID.family(of: group.providerID) == ServerTrafficConfigStore.family {
-                        initialGlyph(group.displayName)
-                    } else {
-                        glyph(group.icon)
+            ForEach(Array(content.segments.enumerated()), id: \.offset) { _, segment in
+                switch segment {
+                case .provider(let group):
+                    HStack(spacing: 4) {
+                        if ProviderAccountID.family(of: group.providerID) == ServerTrafficConfigStore.family {
+                            initialGlyph(group.displayName)
+                        } else {
+                            glyph(group.icon)
+                        }
+                        metricsView(group.metrics)
                     }
-                    metricsView(group.metrics)
+                case .serverStack(let servers):
+                    serverStack(servers)
                 }
             }
         }
@@ -211,10 +216,29 @@ private struct MenuBarTextStrip: View {
         }
     }
 
+    /// Two servers in one slot, one tight line each: the name's initial, then its pinned values.
+    private func serverStack(_ servers: [MenuBarContent.Group]) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 3, verticalSpacing: -2) {
+            ForEach(servers, id: \.providerID) { server in
+                GridRow {
+                    Text(Self.initial(server.displayName))
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    Text(server.metrics.map(\.value).joined(separator: " "))
+                        .font(.system(size: 9, weight: .semibold))
+                        .gridColumnAlignment(.trailing)
+                }
+            }
+        }
+        .fixedSize()
+    }
+
+    private static func initial(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespaces).first.map { String($0).uppercased() } ?? "S"
+    }
+
     /// Server cards all share one mark, so the strip tells them apart by the server name's first letter.
     private func initialGlyph(_ name: String) -> some View {
-        let initial = name.trimmingCharacters(in: .whitespaces).first.map { String($0).uppercased() } ?? "S"
-        return Text(initial)
+        Text(Self.initial(name))
             .font(.system(size: 15, weight: .heavy, design: .rounded))
             .frame(height: Self.glyphSide)
     }
