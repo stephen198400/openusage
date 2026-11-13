@@ -27,6 +27,8 @@ export = "/var/lib/openusage-probe/traffic.json"
 class Handler(http.server.BaseHTTPRequestHandler):
     server_version = "openusage-probe"
     sys_version = ""
+    # A client that stalls mid-handshake or mid-request is dropped instead of holding its thread.
+    timeout = 15
 
     def do_GET(self):
         if self.path != "/openusage/traffic.json":
@@ -54,8 +56,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.minimum_version = ssl.TLSVersion.TLSv1_2
 context.load_cert_chain(f"{cert_dir}/fullchain.pem", f"{cert_dir}/privkey.pem")
-server = http.server.ThreadingHTTPServer(("0.0.0.0", port), Handler)
-server.socket = context.wrap_socket(server.socket, server_side=True)
+class Server(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+
+    # Wrapping the listening socket would run every TLS handshake inside accept() on the main
+    # thread, with no timeout: one client that never finishes its handshake stalls the server for
+    # everyone. Accept plain sockets and let each connection's own thread do its handshake.
+    def get_request(self):
+        sock, addr = self.socket.accept()
+        sock.settimeout(Handler.timeout)
+        return context.wrap_socket(sock, server_side=True, do_handshake_on_connect=False), addr
+
+server = Server(("0.0.0.0", port), Handler)
 server.serve_forever()
 PY
 
