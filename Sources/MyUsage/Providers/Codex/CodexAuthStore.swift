@@ -38,6 +38,8 @@ struct CodexAuthState: Hashable, Sendable {
         case file(path: String)
         case keychain(account: String)
         case pi(CodexPiCredentialSource)
+        /// The login made in MyUsage's own Settings, kept in `SignInVault`.
+        case signIn
     }
 
     var auth: CodexAuth
@@ -60,6 +62,7 @@ enum CodexAuthError: Error, LocalizedError, Equatable {
     case tokenExpired
     case usageAPIKey
     case invalidAuthPayload
+    case signInRequired
 
     var errorDescription: String? {
         switch self {
@@ -77,6 +80,8 @@ enum CodexAuthError: Error, LocalizedError, Equatable {
             return "Usage not available for API key."
         case .invalidAuthPayload:
             return "Codex auth data is invalid."
+        case .signInRequired:
+            return "Signed out. Sign in to Codex again in Settings."
         }
     }
 
@@ -84,7 +89,7 @@ enum CodexAuthError: Error, LocalizedError, Equatable {
         switch self {
         case .sessionExpired, .tokenConflict, .tokenRevoked, .tokenExpired:
             return true
-        case .notLoggedIn, .usageAPIKey, .invalidAuthPayload:
+        case .notLoggedIn, .usageAPIKey, .invalidAuthPayload, .signInRequired:
             return false
         }
     }
@@ -107,6 +112,9 @@ struct CodexAuthStore: Sendable {
     /// write back. Empty for the plain card, which writes wherever it reads.
     var writableAuthHomes: Set<String>
     var piCredentialSources: [CodexPiCredentialSource]
+    /// Set when the user signed in to Codex inside MyUsage. The plain card then reads only that login
+    /// and never the Codex CLI's, so the two never rotate each other's tokens.
+    var signInVault: (any SignInVault)?
 
     init(
         environment: EnvironmentReading = ProcessEnvironmentReader(),
@@ -116,7 +124,8 @@ struct CodexAuthStore: Sendable {
         expectedIdentity: CodexAccountIdentity? = nil,
         additionalAuthHomes: [String] = [],
         writableAuthHomes: Set<String> = [],
-        piCredentialSources: [CodexPiCredentialSource] = []
+        piCredentialSources: [CodexPiCredentialSource] = [],
+        signInVault: (any SignInVault)? = nil
     ) {
         self.environment = environment
         self.files = files
@@ -126,6 +135,21 @@ struct CodexAuthStore: Sendable {
         self.additionalAuthHomes = additionalAuthHomes
         self.writableAuthHomes = writableAuthHomes
         self.piCredentialSources = piCredentialSources
+        self.signInVault = signInVault
+    }
+
+    /// The MyUsage sign-in, or `nil` when there is none (or no vault).
+    func loadSignInAuth() -> CodexAuthState? {
+        guard let signInVault else { return nil }
+        let text: String?
+        do {
+            text = try signInVault.read(.codex)
+        } catch {
+            AppLog.error(LogTag.auth("codex"), "reading the MyUsage sign-in failed: \(error.localizedDescription)")
+            return nil
+        }
+        guard let text, let auth = Self.parseAuth(text), auth.tokens?.accessToken?.isEmpty == false else { return nil }
+        return CodexAuthState(auth: auth, source: .signIn)
     }
 
     func loadAuthCandidates() -> [CodexAuthState] {
@@ -189,6 +213,10 @@ struct CodexAuthStore: Sendable {
             try keychain.writeGenericPassword(service: Self.keychainService, account: account, value: text)
         case .pi:
             throw CodexAuthError.tokenConflict
+        case .signIn:
+            guard let signInVault else { throw CodexAuthError.signInRequired }
+            if let onDisk, loadSignInAuth() != onDisk { throw CodexAuthError.tokenConflict }
+            try signInVault.write(.codex, value: text)
         }
     }
 

@@ -12,6 +12,15 @@ Settings lives inside the popover — there is no separate window. Open it from 
 
 **Upgrading from the legacy (pre-0.7) edition:** the old edition managed start-on-login with its own launcher file, which an in-place update left behind. That leftover could start the app a second time at every login and showed up in System Settings → Login Items under the signing company's name ("SUNSTORY LLC") instead of MyUsage. The app now removes it automatically on launch — only when the file verifiably points at MyUsage itself — so login starts exactly one copy, controlled by the Launch at Login toggle above.
 
+## Accounts
+
+| Setting | Options | What it does |
+|---|---|---|
+| Claude | Sign In / Sign Out | Signs in to Claude inside MyUsage (browser sign-in, or paste the code the page shows). While signed in, the Claude card reads only this login and ignores Claude Code's and Claude Desktop's, so neither app can sign the other out. Signing out goes back to reading Claude Code's login. |
+| Codex | Sign In / Sign Out | The same for Codex. If the Codex CLI is in the middle of its own sign-in (its callback port is taken), MyUsage shows a code to enter on a web page instead. |
+
+The login is kept in a MyUsage-only Keychain item (`MyUsage Sign-In`). MyUsage restarts after a sign-in or sign-out, because the cards are built when the app starts.
+
 ## iCloud Sync
 
 **Sync Across Macs** is off by default. Turning it on shares normalized MyUsage history through the

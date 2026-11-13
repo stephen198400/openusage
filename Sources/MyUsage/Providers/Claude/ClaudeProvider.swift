@@ -180,7 +180,7 @@ final class ClaudeProvider: ProviderRuntime {
                 break
             }
             AppLog.info(LogTag.auth("claude"), "no access token, not logged in")
-            let error = ClaudeAuthError.notLoggedIn
+            let error: ClaudeAuthError = authStore.signInVault == nil ? .notLoggedIn : .signInRequired
             let snapshot = await snapshotWithLocalUsage(
                 mapped: ClaudeMappedUsage(plan: nil, lines: []),
                 warning: error.localizedDescription
@@ -637,13 +637,18 @@ final class ClaudeProvider: ProviderRuntime {
         expectedGeneration: ClaudeCredentialGeneration
     ) async throws -> RefreshedAccess {
         AppLog.info(LogTag.auth("claude"), "token refresh attempt")
-        let response = try await usageClient.refreshToken(refreshToken, config: authStore.oauthConfig())
+        let isSignIn = state.source == .signIn
+        let response = try await usageClient.refreshToken(
+            refreshToken,
+            config: authStore.oauthConfig(),
+            scopes: isSignIn ? ClaudeSignIn.scopes : ClaudeUsageClient.claudeCodeScopes
+        )
         if response.statusCode == 400 || response.statusCode == 401 {
             let body = (try? JSONSerialization.jsonObject(with: response.body)) as? [String: Any]
             let errorCode = body?["error"] as? String ?? body?["error_description"] as? String
             if errorCode == "invalid_grant" {
                 AppLog.warn(LogTag.auth("claude"), "session expired (invalid_grant)")
-                throw ClaudeAuthError.sessionExpired
+                throw isSignIn ? ClaudeAuthError.signInRequired : ClaudeAuthError.sessionExpired
             }
             // A 400/401 without a recognized OAuth error code isn't necessarily an expired token — it
             // can be an HTML proxy/WAF page or a gateway error. Surface the HTTP status rather than

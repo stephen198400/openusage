@@ -48,6 +48,8 @@ struct ClaudeCredentialState: Hashable, Sendable {
         case desktop
         case swapVault
         case environment
+        /// The login made in MyUsage's own Settings, kept in `SignInVault`.
+        case signIn
 
         /// Log-safe source kind , NEVER the keychain service name or any token.
         var label: String {
@@ -58,6 +60,7 @@ struct ClaudeCredentialState: Hashable, Sendable {
             case .desktop: "desktop"
             case .swapVault: "swapVault"
             case .environment: "environment"
+            case .signIn: "signIn"
             }
         }
     }

@@ -67,12 +67,21 @@ final class AppContainer {
         // The launch account pass: which account is signed in at each family's default home. Feeds
         // the snapshot cache's account stamp and reconciles the account registry.
         let accountAssembly = await ProviderAccountAssembly.make(waitsForLoginShell: true)
+        let signedIn = await Task.detached(priority: .userInitiated) {
+            KeychainSignInVault().signedInProviders()
+        }.value
+        // A signed-in provider's card belongs to whoever signed in, not to the local CLI login the
+        // assembly resolved, so its cache isn't guarded by that identity.
+        let identityKeys = accountAssembly.identityKeysByCard.filter { cardID, _ in
+            !signedIn.contains { $0.rawValue == ProviderAccountID.family(of: cardID) }
+        }
 
         let providers = ProviderCatalog.make(
             claudeCards: accountAssembly.claudeCards,
             codex: accountAssembly.codex,
             claudeIdentityKeys: accountAssembly.identityKeysByCard,
-            servers: ServerTrafficConfigStore().loadAll()
+            servers: ServerTrafficConfigStore().loadAll(),
+            signedIn: signedIn
         )
         let registry = WidgetRegistry.from(providers)
         let apiKeyProviders = providers.compactMap { $0 as? any APIKeyManaging }
@@ -94,7 +103,7 @@ final class AppContainer {
             isProviderEnabled: { [enablement] in enablement.isEnabled($0) },
             orderedDescriptors: { [layout] in layout.visiblePlaced.compactMap { layout.descriptor(for: $0) } },
             notificationSettings: { notificationSettings },
-            providerIdentityKeys: accountAssembly.identityKeysByCard
+            providerIdentityKeys: identityKeys
         )
         let iCloudSync = ICloudUsageSyncStore(dataStore: dataStore)
         // Re-enabling a provider should fetch it promptly, so clear any leftover failure backoff before

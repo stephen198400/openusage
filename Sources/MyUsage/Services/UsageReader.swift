@@ -55,12 +55,17 @@ public struct UsageReader {
         let accountAssembly = providersOverride == nil
             ? await ProviderAccountAssembly.make(defaults: defaults, waitsForLoginShell: false)
             : ProviderAccountAssembly(identityKeysByCard: [:])
+        let signedIn = providersOverride == nil ? KeychainSignInVault().signedInProviders() : []
+        let identityKeys = accountAssembly.identityKeysByCard.filter { cardID, _ in
+            !signedIn.contains { $0.rawValue == ProviderAccountID.family(of: cardID) }
+        }
         let providers = providersOverride ?? ProviderCatalog.make(
             defaults: defaults,
             claudeCards: accountAssembly.claudeCards,
             codex: accountAssembly.codex,
             claudeIdentityKeys: accountAssembly.identityKeysByCard,
-            servers: ServerTrafficConfigStore().loadAll()
+            servers: ServerTrafficConfigStore().loadAll(),
+            signedIn: signedIn
         )
         let registry = WidgetRegistry.from(providers)
         let knownIDs = Set(registry.providers.map(\.id))
@@ -86,7 +91,7 @@ public struct UsageReader {
         // account (swap since it was written) is never served, and its provider counts as needing a
         // refresh even while the stale entry is TTL-fresh.
         let staleAccountStampIDs = Set(allProviderIDs.filter {
-            cache.hasStaleAccountStamp(providerID: $0, currentIdentityKey: accountAssembly.identityKeysByCard[$0])
+            cache.hasStaleAccountStamp(providerID: $0, currentIdentityKey: identityKeys[$0])
         })
         let cachedSnapshots = cache.loadSnapshots(providerIDs: allProviderIDs)
             .filter { providerID, _ in !staleAccountStampIDs.contains(providerID) }
@@ -113,7 +118,7 @@ public struct UsageReader {
                 isProviderEnabled: includesProvider,
                 // The CLI shares the app's snapshot cache, so its writes must carry the same account
                 // stamp — an unstamped claude/codex entry would be discarded at the app's next launch.
-                providerIdentityKeys: accountAssembly.identityKeysByCard
+                providerIdentityKeys: identityKeys
             )
             if let matchedIDs {
                 for providerID in orderedIDs.filter(matchedIDs.contains) {

@@ -9,12 +9,18 @@ enum ProviderCatalog {
         claudeCards: [ClaudeAccountCard] = [],
         codex: CodexAccountDiscovery = CodexAccountDiscovery(),
         claudeIdentityKeys: [String: String] = [:],
-        servers: [ServerTrafficConfig] = []
+        servers: [ServerTrafficConfig] = [],
+        signedIn: Set<SignInProvider> = [],
+        signInVault: any SignInVault = KeychainSignInVault()
     ) -> [ProviderRuntime] {
         // Default provider order (see AGENTS.md "## Providers"): the three established providers first,
         // then every other provider alphabetically by display name.
         var providers: [ProviderRuntime]
-        if claudeCards.isEmpty {
+        // A MyUsage sign-in replaces account discovery for its provider: one plain card that reads only
+        // that login (see `ClaudeAuthStore.signInVault`).
+        if signedIn.contains(.claude) {
+            providers = [ClaudeProvider(authStore: ClaudeAuthStore(signInVault: signInVault))]
+        } else if claudeCards.isEmpty {
             providers = [ClaudeProvider()]
         } else {
             providers = claudeCards.map { card in
@@ -43,7 +49,12 @@ enum ProviderCatalog {
                 )
             }
         }
-        if codex.cards.isEmpty {
+        if signedIn.contains(.codex) {
+            providers.append(CodexProvider(
+                authStore: CodexAuthStore(signInVault: signInVault),
+                logUsageScanner: CodexLogUsageScanner(additionalHomes: codex.plainAuthHomes)
+            ))
+        } else if codex.cards.isEmpty {
             providers.append(CodexProvider(
                 authStore: CodexAuthStore(
                     additionalAuthHomes: codex.plainAuthHomes,

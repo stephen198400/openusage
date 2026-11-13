@@ -64,7 +64,7 @@ enum ClaudeAccountVerification: Sendable {
 }
 
 struct ClaudeUsageClient: Sendable {
-    private static let scopes = "user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
+    static let claudeCodeScopes = "user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
 
     var httpClient: HTTPClient
 
@@ -72,12 +72,18 @@ struct ClaudeUsageClient: Sendable {
         self.httpClient = httpClient
     }
 
-    func refreshToken(_ refreshToken: String, config: ClaudeOAuthConfig) async throws -> HTTPResponse {
+    /// `scopes` must match what the login was granted: Claude Code's own login holds the full set,
+    /// a MyUsage sign-in only `ClaudeSignIn.scopes`.
+    func refreshToken(
+        _ refreshToken: String,
+        config: ClaudeOAuthConfig,
+        scopes: String = Self.claudeCodeScopes
+    ) async throws -> HTTPResponse {
         let body: [String: Any] = [
             "grant_type": "refresh_token",
             "refresh_token": refreshToken,
             "client_id": config.clientID,
-            "scope": Self.scopes
+            "scope": scopes
         ]
         let bodyData = try JSONSerialization.data(withJSONObject: body)
         return try await httpClient.send(

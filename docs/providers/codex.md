@@ -30,7 +30,12 @@ If Codex reports only a 7-day window, it maps to Weekly without inventing a 5-ho
 
 ## Where credentials come from
 
-Sign in once with the Codex CLI (`codex`); MyUsage reads the same auth files (`$CODEX_HOME` respected) with a Keychain fallback. The first Keychain read can ask you to grant MyUsage access; choosing **Always Allow** authorizes the signed app for later background reads. macOS may ask once more after Codex renews its Keychain login. If you choose **Deny**, MyUsage stops asking until you refresh manually. Tokens refresh automatically and rotate back into the same auth file or Keychain item they came from.
+**Signed in from Settings → Accounts:** the card reads only that login, kept in MyUsage's own
+Keychain item, and renews it itself. The Codex CLI's `auth.json` and Keychain login are not used for
+live limits, and account discovery is off for Codex while you're signed in. Local spend still comes
+from your Codex logs. If the login expires, the card says **Signed out**; sign in again from Settings.
+
+**Otherwise,** sign in once with the Codex CLI (`codex`); MyUsage reads the same auth files (`$CODEX_HOME` respected) with a Keychain fallback. The first Keychain read can ask you to grant MyUsage access; choosing **Always Allow** authorizes the signed app for later background reads. macOS may ask once more after Codex renews its Keychain login. If you choose **Deny**, MyUsage stops asking until you refresh manually. Tokens refresh automatically and rotate back into the same auth file or Keychain item they came from.
 
 The Keychain fallback selects the Codex CLI item for `$CODEX_HOME` (or `~/.codex` when unset), including when that home is a symlink. Other Codex homes can have separate Keychain logins; MyUsage does not pick an unrelated item just because it has the same service name.
 

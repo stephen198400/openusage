@@ -50,9 +50,14 @@ final class CodexResetClaimService: ResetClaimService {
         self.init(
             usageClient: usageClient,
             credentialCandidates: {
-                var candidates = authStore.loadAuthCandidates()
-                if let keychain = await loadOffMainActor({ authStore.loadKeychainAuth() }) {
-                    candidates.append(keychain)
+                var candidates: [CodexAuthState]
+                if authStore.signInVault != nil {
+                    candidates = await loadOffMainActor({ authStore.loadSignInAuth() }).map { [$0] } ?? []
+                } else {
+                    candidates = authStore.loadAuthCandidates()
+                    if let keychain = await loadOffMainActor({ authStore.loadKeychainAuth() }) {
+                        candidates.append(keychain)
+                    }
                 }
                 return candidates.compactMap { candidate in
                     guard candidate.hasUsableAccessToken, let token = candidate.auth.tokens?.accessToken else {

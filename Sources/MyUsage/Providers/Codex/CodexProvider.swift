@@ -78,6 +78,9 @@ final class CodexProvider: ProviderRuntime {
     }
 
     func hasLocalCredentials() async -> Bool {
+        if authStore.signInVault != nil {
+            return await loadOffMainActor { [authStore] in authStore.loadSignInAuth() } != nil
+        }
         // Same sources as `refresh()`: auth.json candidates first, keychain as the fallback. Only a
         // usable access token counts (see `hasUsableAccessToken`) — an API-key-only auth.json can't
         // serve the usage API, so seeding it on would just show an error row.
@@ -96,6 +99,7 @@ final class CodexProvider: ProviderRuntime {
     }
 
     func refresh() async -> ProviderSnapshot {
+        if authStore.signInVault != nil { return await refreshSignIn() }
         if authStore.expectedIdentity != nil { return await refreshAccount() }
         let fileCandidates = authStore.loadAuthCandidates()
         var lastFallbackError: Error?
@@ -124,6 +128,22 @@ final class CodexProvider: ProviderRuntime {
             return ProviderSnapshot.error(provider: provider, error: lastFallbackError)
         }
         return ProviderSnapshot.error(provider: provider, error: CodexAuthError.notLoggedIn)
+    }
+
+    /// A MyUsage sign-in is the only login this card reads; an expired or revoked one asks the user
+    /// to sign in again in Settings rather than to run `codex`.
+    private func refreshSignIn() async -> ProviderSnapshot {
+        guard var state = await loadOffMainActor({ [authStore] in authStore.loadSignInAuth() }) else {
+            return ProviderSnapshot.error(provider: provider, error: CodexAuthError.signInRequired)
+        }
+        do {
+            return try await probe(authState: &state)
+        } catch let error as CodexAuthError where error.allowsAuthFallback {
+            AppLog.warn(LogTag.auth("codex"), "MyUsage sign-in no longer works (\(error))")
+            return ProviderSnapshot.error(provider: provider, error: CodexAuthError.signInRequired)
+        } catch {
+            return ProviderSnapshot.error(provider: provider, error: error)
+        }
     }
 
     /// Fetches usage for one credential, refreshing and persisting its token when it may. On return
@@ -340,6 +360,8 @@ final class CodexProvider: ProviderRuntime {
             return await loadOffMainActor { [authStore] in authStore.loadKeychainAuth(account: account) }
         case .pi(let source):
             return authStore.loadPiAuth(source)
+        case .signIn:
+            return await loadOffMainActor { [authStore] in authStore.loadSignInAuth() }
         }
     }
 

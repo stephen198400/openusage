@@ -52,7 +52,12 @@ also use a reset with `/rate-limit-options` in Claude Code.
 
 ## Where credentials come from
 
-Sign in with Claude Code or Claude Desktop; MyUsage reads the existing login. It checks these sources, preferring one that can read your subscription usage:
+**Signed in from Settings → Accounts:** the card reads only that login, kept in MyUsage's own
+Keychain item, and renews it itself. Claude Code's and Claude Desktop's logins are not read at all,
+and account discovery (multiple cards, Claude Swap) is off for Claude while you're signed in. If the
+login expires, the card says **Signed out**; sign in again from Settings.
+
+**Otherwise,** sign in with Claude Code or Claude Desktop; MyUsage reads the existing login. It checks these sources, preferring one that can read your subscription usage:
 
 1. The macOS keychain entry Claude Code maintains (its source of truth on macOS)
 2. `~/.claude/.credentials.json` (or `$CLAUDE_CONFIG_DIR/.credentials.json`)

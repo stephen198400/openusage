@@ -11,6 +11,7 @@ enum ClaudeAuthError: Error, LocalizedError, Equatable {
     case tokenExpired
     case credentialsChanged
     case invalidOAuthURL(String)
+    case signInRequired
 
     var errorDescription: String? {
         switch self {
@@ -32,6 +33,8 @@ enum ClaudeAuthError: Error, LocalizedError, Equatable {
             return "Claude login changed during refresh. Refresh again."
         case .invalidOAuthURL(let value):
             return "Invalid Claude OAuth URL: \(value). Check CLAUDE_CODE_CUSTOM_OAUTH_URL / CLAUDE_LOCAL_OAUTH_API_BASE."
+        case .signInRequired:
+            return "Signed out. Sign in to Claude again in Settings."
         }
     }
 
@@ -46,7 +49,7 @@ enum ClaudeAuthError: Error, LocalizedError, Equatable {
         case .sessionExpired, .tokenExpired, .desktopTokenExpired, .swapTokenExpired:
             return true
         case .notLoggedIn, .desktopPermissionRequired, .desktopCredentialsUnavailable,
-             .credentialsChanged, .invalidOAuthURL:
+             .credentialsChanged, .invalidOAuthURL, .signInRequired:
             return false
         }
     }
@@ -77,6 +80,9 @@ struct ClaudeAuthStore: Sendable {
     let desktopOnly: Bool
     let swapAccount: ClaudeSwapAccount?
     let preferOrganizationScopedDesktop: Bool
+    /// Set when the user signed in to Claude inside MyUsage. The store then reads only that login and
+    /// never Claude Code's or Claude Desktop's, so the two apps never rotate each other's tokens.
+    let signInVault: (any SignInVault)?
 
     init(
         environment: EnvironmentReading = ProcessEnvironmentReader(),
@@ -88,6 +94,7 @@ struct ClaudeAuthStore: Sendable {
         desktopOnly: Bool = false,
         swapAccount: ClaudeSwapAccount? = nil,
         preferOrganizationScopedDesktop: Bool = false,
+        signInVault: (any SignInVault)? = nil,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.environment = environment
@@ -99,6 +106,7 @@ struct ClaudeAuthStore: Sendable {
         self.desktopOnly = desktopOnly
         self.swapAccount = swapAccount
         self.preferOrganizationScopedDesktop = preferOrganizationScopedDesktop
+        self.signInVault = signInVault
         self.now = now
     }
 
@@ -111,6 +119,12 @@ struct ClaudeAuthStore: Sendable {
         allowDesktopInteraction: Bool = false,
         forceDesktopFallback: Bool = false
     ) -> ClaudeCredentialLoad {
+        if let signInVault {
+            return ClaudeCredentialLoad(
+                candidates: loadSignInCredentials(signInVault).map { [$0] } ?? [],
+                desktopStatus: .notChecked
+            )
+        }
         var stored: [ClaudeCredentialState]
         if let swapAccount {
             var candidates: [ClaudeCredentialState] = []
@@ -234,6 +248,9 @@ struct ClaudeAuthStore: Sendable {
             try keychain.writeGenericPasswordForCurrentUser(service: service, value: text)
         case .keychainLegacy(let service):
             try keychain.writeGenericPassword(service: service, value: text)
+        case .signIn:
+            guard let signInVault else { return false }
+            try signInVault.write(.claude, value: text)
         case .desktop, .swapVault:
             return false
         case .environment:
@@ -372,6 +389,22 @@ struct ClaudeAuthStore: Sendable {
             AppLog.debug(LogTag.auth("claude"), "credential source: \(only.source.label)")
         }
         return candidates
+    }
+
+    private func loadSignInCredentials(_ vault: any SignInVault) -> ClaudeCredentialState? {
+        let text: String?
+        do {
+            text = try vault.read(.claude)
+        } catch {
+            AppLog.error(LogTag.auth("claude"), "reading the MyUsage sign-in failed: \(error.localizedDescription)")
+            return nil
+        }
+        guard let text,
+              let parsed = Self.parseCredentials(text),
+              let oauth = parsed.claudeAiOauth,
+              oauth.accessToken?.isEmpty == false
+        else { return nil }
+        return ClaudeCredentialState(oauth: oauth, source: .signIn, fullData: parsed, inferenceOnly: false)
     }
 
     private func loadFileCredentials() -> ClaudeCredentialState? {
