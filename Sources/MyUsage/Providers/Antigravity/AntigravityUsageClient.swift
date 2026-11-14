@@ -27,11 +27,14 @@ enum TokenRefreshOutcome: Sendable {
 /// Google Cloud Code endpoints, and the Google OAuth token refresh.
 struct AntigravityUsageClient: Sendable {
     static let lsService = "exa.language_server_pb.LanguageServerService"
-    // The daily endpoint can omit Gemini quotas from a successful response; prefer production.
+    // Plan, project, and legacy model lookups prefer production.
     static let cloudCodeURLs = [
         "https://cloudcode-pa.googleapis.com",
         "https://daily-cloudcode-pa.googleapis.com"
     ]
+    // The quota summary prefers daily: production can report untouched Gemini windows while daily has
+    // the live counters. Production fills missing buckets or a failed daily read.
+    static let quotaSummaryURLs = Array(cloudCodeURLs.reversed())
     static let fetchModelsPath = "/v1internal:fetchAvailableModels"
     static let loadCodeAssistPath = "/v1internal:loadCodeAssist"
     static let retrieveQuotaPath = "/v1internal:retrieveUserQuota"
@@ -117,9 +120,9 @@ struct AntigravityUsageClient: Sendable {
         return .unavailable
     }
 
-    /// POST a Cloud Code endpoint on each base URL in order and return every 2xx body in base-URL order.
-    /// The hosts can disagree: `daily-cloudcode-pa` has answered the quota summary with only the Claude
-    /// group while `cloudcode-pa` also returned Gemini, so a caller merging by id may need both. Stops
+    /// POST the quota summary on each `quotaSummaryURLs` host (daily first) and return every 2xx body in
+    /// that order. The hosts can disagree: one has answered with only the Claude group while the other
+    /// also returned Gemini, so a caller merging by id may need both. Stops
     /// after the first base when its 2xx body is one `isComplete` accepts: callers merge first-wins, so
     /// a later answer couldn't change the result. Any 2xx wins; otherwise a 401/403 on any base is
     /// `.authFailed`, and anything else `.unavailable`.
@@ -132,7 +135,7 @@ struct AntigravityUsageClient: Sendable {
     ) async -> CloudCodeAllHostsOutcome {
         let payload = (try? JSONSerialization.data(withJSONObject: body)) ?? Data("{}".utf8)
         var responses: [HTTPResponse] = []
-        for (index, base) in Self.cloudCodeURLs.enumerated() {
+        for (index, base) in Self.quotaSummaryURLs.enumerated() {
             guard let url = URL(string: base + path) else { continue }
             let request = Self.cloudCodeRequest(url: url, token: token, userAgent: userAgent, payload: payload)
             guard let response = try? await http.send(request) else { continue }
