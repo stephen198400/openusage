@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Builds MyUsage, stages a signed .app bundle under dist/, and launches it in place — no install
-# to /Applications. The dev build:
+# to /Applications unless you pass `install`, which copies the bundle over /Applications/MyUsage.app
+# (the copy login items and Spotlight launch) and starts it from there. The dev build:
 #   - is signed with a stable Apple Development identity, so keychain/permission grants stick across
 #     rebuilds (macOS keys those to the signing identity + bundle id, not the install location);
 #   - uses its own bundle id (com.cicada.myusage.dev), so it never touches the real installed
@@ -11,7 +12,7 @@ set -euo pipefail
 #   - ships no Sparkle feed, so it never checks for or installs updates (test updates with a real
 #     signed + notarized release build — that's the only honest way).
 #
-# Usage: script/build_and_run.sh [run|build|logs|verify]
+# Usage: script/build_and_run.sh [run|build|install|logs|verify]
 # Env:   CODESIGN_IDENTITY  override signing identity (exact name or hash)
 #        CONFIG             "release" (default) or "debug"
 #        ICLOUD_PROVISIONING_PROFILE  optional override for the development provisioning profile;
@@ -222,6 +223,13 @@ case "$MODE" in
   build)
     : # build + stage + sign only
     ;;
+  install)
+    INSTALLED_APP="/Applications/$APP_DISPLAY.app"
+    rm -rf "$INSTALLED_APP"
+    /usr/bin/ditto "$APP_BUNDLE" "$INSTALLED_APP"
+    /usr/bin/open -n "$INSTALLED_APP"
+    echo "==> installed and launched $INSTALLED_APP"
+    ;;
   logs)
     launch_app
     /usr/bin/log stream --info --style compact --predicate "process == \"$TARGET_NAME\""
@@ -232,7 +240,7 @@ case "$MODE" in
     pgrep -x "$TARGET_NAME" >/dev/null && echo "==> running"
     ;;
   *)
-    echo "usage: $0 [run|build|logs|verify]" >&2
+    echo "usage: $0 [run|build|install|logs|verify]" >&2
     exit 2
     ;;
 esac

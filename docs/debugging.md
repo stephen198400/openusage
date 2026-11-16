@@ -10,11 +10,14 @@ The project script owns the build/run loop. From the repo root:
 ```sh
 ./script/build_and_run.sh          # build and launch the dev app from dist/
 ./script/build_and_run.sh build    # build and stage only, don't launch
+./script/build_and_run.sh install  # build, replace /Applications/MyUsage.app, and launch it
 ./script/build_and_run.sh verify   # launch and confirm the process is running
 ```
 
 The script builds a signed app bundle under `dist/` and launches it in place — nothing is installed to
-`/Applications`. The dev build uses its own bundle id (`com.cicada.myusage.dev`), so it keeps its
+`/Applications` unless you use `install`. If you keep a copy in `/Applications` (for example as a login
+item), use `install` after each change; otherwise that copy stays on the old build and comes back
+after a restart. The dev build uses its own bundle id (`com.cicada.myusage.dev`), so it keeps its
 own settings and keychain and never disturbs a released MyUsage. It ships no update feed, so it never
 checks for updates — test updates with a real signed, notarized release build.
 
